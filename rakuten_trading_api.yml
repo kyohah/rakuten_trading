@@ -1,0 +1,1256 @@
+openapi: 3.0.0
+info:
+  title: API（証拠金取引所）
+  description: >
+    本APIを利用することにより、取り扱っている銘柄一覧の取得、ローソク足データの取得、板の取得、歩値の取得、注文、残高照会といった操作を行う事ができます。
+
+    ## 留意事項
+    - APIキーはお客様のアカウント情報と紐付いております。もし第三者がお客様のAPIキーを知った場合、遠隔で売買注文の操作が可能となります。APIキーを第三者へ渡す事はセキュリティリスクを鑑みお控えください。
+    - 他社が提供するAPI機能を使用した自動売買取引ツールは、ご自身の判断と責任でご利用ください。
+    - リクエストパラメーターやレスポンスの日時についてはミリ秒のtimestamp(Unix Time)を用います。
+    - 日時の範囲検索は「以上・未満」で検索します。
+
+  version: "1.0.0"
+servers:
+  - url: https://exchange.rakuten-wallet.co.jp/api/v1
+tags:
+  - name: public
+    description: パブリックAPI
+  - name: private
+    description: プライベートAPI
+    
+paths:
+  /cfd/symbol:
+    get:
+      summary: 銘柄一覧取得
+      description: >
+        利用可能な全銘柄の一覧を取得します。
+      tags:
+        - public
+      operationId: get_symbol
+      parameters:
+        - name: authority
+          in: query
+          description: PERSONAL, CORPORATE。
+          required: false
+          schema:
+            type: string
+            enum:
+              - PERSONAL
+              - CORPORATE
+            example: CORPORATE
+      responses:
+        200:
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      description: シンボルID
+                      type: integer
+                      format: int64
+                      example: 7
+                    authority:
+                      description: 口座種別
+                      type: string
+                      example: PERSONAL
+                    tradeType:
+                      description: 取引タイプ
+                      type: string
+                      example: CFD
+                    currencyPair:
+                      description: 通貨ペア
+                      type: string
+                      example: BTC_JPY
+                    baseCurrency:
+                      description: ベース通貨
+                      type: string
+                      example: BTC
+                    quoteCurrency:
+                      description: クォート通貨
+                      type: string
+                      example: JPY
+                    baseScale:
+                      description: 数量の小数点以下桁数(ベース通貨桁数)。例) 1の場合0.1など
+                      type: integer
+                      example: 2
+                    quoteScale:
+                      description: 価格の小数点以下桁数(クォート通貨桁数)。例) 0の場合、50000など
+                      type: integer
+                      example: 0
+                    baseStepAmount:
+                      description: 取扱単位(注文数量の最小単位)
+                      type: string
+                      example: "0.01"
+                    minOrderAmount:
+                      description: 1回の最小注文数量
+                      type: string
+                      example: "0.01"
+                    maxOrderAmount:
+                      description: 1回の最大注文数量
+                      type: string
+                      example: "10.00"
+                    makerTradeFeePercent:
+                      description: メイカー約定手数料率%
+                      type: string
+                      example: "-0.23"
+                    takerTradeFeePercent:
+                      description: テイカー約定手数料率%
+                      type: string
+                      example: "0.23"
+                    closeOnly:
+                      description: 新規停止(決済・取消のみ可能)
+                      type: boolean
+                      example: false
+                    viewOnly:
+                      description: レポート閲覧のみ可能
+                      type: boolean
+                      example: false
+                    enabled:
+                      description: 有効
+                      type: boolean
+                      example: true
+
+  /candlestick:
+    get:
+      summary: ローソク取得
+      description: >
+        指定された銘柄のローソク足データを取得します。データは指定された範囲で検索され、最新のデータから最大500件まで取得することが可能です。
+      tags:
+        - public
+      operationId: get_candlestick
+      parameters:
+        - name: symbolId
+          in: query
+          description: シンボルID
+          required: true
+          schema:
+            type: integer
+            format: int64
+            example: 7
+        - name: candlestickType
+          in: query
+          description: ローソク足の種類。ISO8601フォーマットに準拠。
+          required: true
+          schema:
+            type: string
+            enum:
+              - PT1M
+              - PT5M
+              - PT15M
+              - PT30M
+              - PT1H
+              - PT4H
+              - PT8H
+              - P1D
+              - P1W
+              - P1M
+            example: PT1H
+        - name: dateFrom
+          in: query
+          description: 取得開始日時。UNIXタイムスタンプ（ミリ秒）で指定。
+          required: false
+          schema:
+            type: integer
+            format: int64
+            example: 1611029776000
+        - name: dateTo
+          in: query
+          description: 取得終了日時。UNIXタイムスタンプ（ミリ秒）で指定。
+          required: false
+          schema:
+            type: integer
+            format: int64
+            example: 1611129776000
+      responses:
+        200:
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  symbolId:
+                    type: integer
+                    format: int64
+                    example: 7
+                  candlesticks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        open:
+                          type: string
+                          example: "3633849"
+                        high:
+                          type: string
+                          example: "3878414"
+                        low:
+                          type: string
+                          example: "3615752"
+                        close:
+                          type: string
+                          example: "3802653"
+                        volume:
+                          type: string
+                          example: "94.71"
+                        time:
+                          type: integer
+                          format: int64
+                          example: 1646891040000
+                  timestamp:
+                    type: integer
+                    format: int64
+                    example: 1646899209917
+  /orderbook:
+    get:
+      summary: 板取得
+      tags:
+        - public
+      operationId: get_orderbook
+      parameters:
+        - name: symbolId
+          in: query
+          description: シンボルID
+          required: true
+          schema:
+            type: integer
+            format: int64
+            example: 7
+      responses:
+        200:
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  symbolId:
+                    type: integer
+                    format: int64
+                    example: 7
+                  asks:
+                    type: array
+                    description: 売り板
+                    items:
+                      $ref: '#/components/schemas/Order'
+                  bids:
+                    type: array
+                    description: 買い板
+                    items:
+                      $ref: '#/components/schemas/Order'
+                  bestAsk:
+                    type: string
+                    example: "3633849"
+                  bestBid:
+                    type: string
+                    example: "3633749"
+                  midPrice:
+                    type: string
+                    example: "3633799"
+                  spread:
+                    type: string
+                    example: "100"
+                  timestamp:
+                    type: integer
+                    format: int64
+                    example: 1646979758829
+
+  /ticker:
+    get:
+      summary: ティッカー取得
+      operationId: get_ticker
+      tags:
+        - public
+      parameters:
+        - name: symbolId
+          in: query
+          description: シンボルID
+          required: true
+          schema:
+            type: integer
+            format: int64
+            example: 7
+      responses:
+        200:
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  symbolId:
+                    type: integer
+                    format: int64
+                    example: 7
+                  bestAsk:
+                    type: string
+                    example: "3802663"
+                    description: 直近の売り板の最良価格
+                  bestBid:
+                    type: string
+                    example: "3802643"
+                    description: 直近の買い板の最良価格
+                  open:
+                    type: string
+                    example: "3633849"
+                  high:
+                    type: string
+                    example: "3878414"
+                  low:
+                    type: string
+                    example: "3615752"
+                  last:
+                    type: string
+                    example: "3802653"
+                  volume:
+                    type: string
+                    example: "94.71"
+                    description: 直近24時間の出来高
+                  timestamp:
+                    type: integer
+                    format: int64
+                    example: 1647239612000
+
+  /trades:
+    get:
+      summary: 歩み値取得
+      operationId: get_trades
+      tags:
+        - public
+      parameters:
+        - name: symbolId
+          in: query
+          description: シンボルID
+          required: true
+          schema:
+            type: integer
+            format: int64
+            example: 7
+      responses:
+        200:
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  symbolId:
+                    type: integer
+                    format: int64
+                    example: 7
+                  trades:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Trade'
+                  timestamp:
+                    type: integer
+                    format: int64
+                    example: 1611029776000
+  /asset:
+    get:
+      summary: 残高一覧取得
+      operationId: get_asset
+      security:
+        - ApiKeyAuth: []
+        - SignatureAuth: []
+      tags:
+        - private
+      description: >
+        アカウントの資産情報（各通貨の保有量）を取得します。
+      responses:
+        200:
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    currency:
+                      type: string
+                      description: 通貨
+                      example: JPY
+                    onhandAmount:
+                      type: string
+                      description: 保有数量
+                      example: "10000000"
+  /cfd/equitydata:
+    get:
+      summary: 証拠金関連項目取得
+      operationId: get_equitydata
+      security:
+        - ApiKeyAuth: []
+        - SignatureAuth: []
+      tags:
+        - private
+      description: >
+        口座の証拠金関連情報を取得します。これには建玉評価損益、必要証拠金、証拠金維持率などが含まれます。
+      responses:
+        200:
+          description: 証拠金関連情報の取得に成功しました。
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  floatingProfit:
+                    type: string
+                    description: 建玉評価損益
+                    example: "93"
+                  floatingPositionFee:
+                    type: string
+                    description: 建玉管理料
+                    example: "0"
+                  remainingFloatingPositionFee:
+                    type: string
+                    description: 建玉管理料（未実現）
+                    example: "123"
+                  floatingTradeFee:
+                    type: string
+                    description: 想定約定手数料
+                    example: "12"
+                  floatingProfitAll:
+                    type: string
+                    description: 総評価損益（建玉評価損益 - 建玉管理料（未実現） - 想定約定手数料）
+                    example: "0"
+                  usedMargin:
+                    type: string
+                    description: 必要証拠金
+                    example: "672.05"
+                  necessaryMargin:
+                    type: string
+                    description: 注文中証拠金
+                    example: "802000"
+                  balance:
+                    type: string
+                    description: 証拠金残高
+                    example: "81456"
+                  equity:
+                    type: string
+                    description: 純資産額
+                    example: "81456"
+                  marginMaintenancePercent:
+                    type: string
+                    description: 証拠金維持率%
+                    example: "207.58"
+                  usableAmount:
+                    type: string
+                    description: 建玉可能額
+                    example: "81455"
+                  withdrawableAmount:
+                    type: string
+                    description: 出金可能額
+                    example: "814553"
+                  withdrawalAmountReserved:
+                    type: string
+                    description: 出金依頼中金額
+                    example: "25000"
+
+  /cfd/order:
+    get:
+      summary: 注文一覧取得
+      operationId: get_order
+      tags:
+        - private
+      security:
+        - ApiKeyAuth: []
+        - SignatureAuth: []
+      description: >
+        指定された条件にマッチする注文一覧を取得します。このエンドポイントを通じて、特定のシンボル、注文タイプ、または期間に関する注文の詳細情報を照会することができます。
+      parameters:
+        - name: symbolId
+          in: query
+          description: シンボルID
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: id
+          in: query
+          description: 注文IDの配列
+          required: false
+          schema:
+            type: array
+            items:
+              type: integer
+              format: int64
+        - name: dateFrom
+          in: query
+          description: 取得開始日時（注文成立日時）。UNIXタイムスタンプ（ミリ秒）で指定。
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: dateTo
+          in: query
+          description: 取得終了日時（注文成立日時）。UNIXタイムスタンプ（ミリ秒）で指定。
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: orderBehavior
+          in: query
+          description: 注文の挙動（OPEN, CLOSE）
+          required: false
+          schema:
+            type: string
+        - name: orderSide
+          in: query
+          description: 売買方向（SELL, BUY）
+          required: false
+          schema:
+            type: string
+        - name: orderPattern
+          in: query
+          description: 注文パターン（NORMAL, OCO, IFD, IFD_OCO）
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: orderType
+          in: query
+          description: 執行条件（MARKET, LIMIT, STOP）
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: closeBehavior
+          in: query
+          description: 決済挙動（CROSS, FIFO）
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: orderStatus
+          in: query
+          description: 注文ステータス（WORKING_ORDER, PARTIAL_FILL）
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: postOnly
+          in: query
+          description: メイカー注文のみ許可
+          required: false
+          schema:
+            type: boolean
+        - name: size
+          in: query
+          description: 取得件数。デフォルトは30、最大は500。
+          required: false
+          schema:
+            type: integer
+            default: 30
+            maximum: 500
+      responses:
+        200:
+          description: 注文一覧の取得に成功しました。
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderDetail'
+    post:
+      summary: 注文
+      operationId: order
+      security:
+        - ApiKeyAuth: []
+        - SignatureAuth: []
+      tags:
+        - private
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                symbolId:
+                  type: integer
+                  format: int64
+                  example: 7
+                orderPattern:
+                  type: string
+                  example: "NORMAL"
+                orderData:
+                  $ref: '#/components/schemas/OrderData'
+      responses:
+        200:
+          description: 注文が成功しました
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderResponse'
+
+    put:
+      summary: 注文訂正
+      operationId: order_amend
+      security:
+        - ApiKeyAuth: []
+        - SignatureAuth: []
+      tags:
+        - private
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                symbolId:
+                  type: integer
+                  format: int64
+                  example: 7
+                orderPattern:
+                  type: string
+                  example: "NORMAL"
+                orderData:
+                  $ref: '#/components/schemas/OrderData'
+      responses:
+        200:
+          description: 注文訂正が成功しました
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderResponse'
+
+    delete:
+      summary: 注文取消
+      operationId: order_cancel
+      security:
+        - ApiKeyAuth: []
+        - SignatureAuth: []
+      tags:
+        - private
+      parameters:
+        - name: symbolId
+          in: query
+          description: シンボルID
+          required: true
+          schema:
+            type: integer
+            format: int64
+            example: 7
+        - name: id
+          in: query
+          description: 注文ID
+          required: true
+          schema:
+            type: integer
+            format: int64
+            example: 944
+      responses:
+        200:
+          description: 注文取消が成功しました
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OrderResponse'
+  /cfd/trade:
+    get:
+      summary: 約定履歴取得
+      operationId: get_cfd_trades
+      tags:
+        - private
+      security:
+        - ApiKeyAuth: []
+        - SignatureAuth: []
+      description: >
+        指定された条件に基づくCFD取引の約定履歴（トレード）を取得します。これにより、ユーザーは過去の取引データを分析することができます。
+      parameters:
+        - name: symbolId
+          in: query
+          description: シンボルID
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: id
+          in: query
+          description: 約定IDの配列
+          required: false
+          schema:
+            type: array
+            items:
+              type: integer
+              format: int64
+        - name: dateFrom
+          in: query
+          description: 取得開始日時（作成日時）。UNIXタイムスタンプ（ミリ秒）で指定。直近48時間。
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: dateTo
+          in: query
+          description: 取得終了日時（作成日時）。UNIXタイムスタンプ（ミリ秒）で指定。直近48時間。
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: orderBehavior
+          in: query
+          description: 注文の挙動（OPEN, CLOSE）
+          required: false
+          schema:
+            type: string
+        - name: tradeBehavior
+          in: query
+          description: トレードの挙動（OPEN, CLOSE）
+          required: false
+          schema:
+            type: string
+        - name: orderSide
+          in: query
+          description: 売買方向（SELL, BUY）
+          required: false
+          schema:
+            type: string
+        - name: orderPattern
+          in: query
+          description: 注文パターン（NORMAL, OCO, IFD, IFD_OCO, LOSS_CUT, CLOSE_ALL）
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: orderType
+          in: query
+          description: 執行条件（MARKET, LIMIT, STOP）
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+        - name: tradeAction
+          in: query
+          description: 約定アクション（MAKER, TAKER）
+          required: false
+          schema:
+            type: string
+        - name: orderId
+          in: query
+          description: 注文IDの配列
+          required: false
+          schema:
+            type: array
+            items:
+              type: integer
+              format: int64
+        - name: positionId
+          in: query
+          description: 建玉IDの配列
+          required: false
+          schema:
+            type: array
+            items:
+              type: integer
+              format: int64
+        - name: size
+          in: query
+          description: 取得件数。デフォルトは30、最大は500。
+          required: false
+          schema:
+            type: integer
+            default: 30
+            maximum: 500
+      responses:
+        200:
+          description: 約定履歴の取得に成功しました。
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CfdTrade'
+
+  /cfd/position:
+    get:
+      summary: 建玉一覧取得
+      security:
+        - ApiKeyAuth: []
+        - SignatureAuth: []
+      operationId: get_position
+      tags:
+        - private
+      parameters:
+        - name: symbolId
+          in: query
+          description: シンボルID。特定の銘柄に対する建玉のみを取得したい場合に指定します。
+          required: false
+          schema:
+            type: integer
+            format: int64
+            example: 7
+        - name: id
+          in: query
+          description: 建玉ID。特定の建玉情報のみを取得したい場合に指定します。
+          required: false
+          schema:
+            type: array
+            items:
+              type: integer
+              format: int64
+        - name: dateFrom
+          in: query
+          description: 取得開始日時。指定日時以上の建玉を検索します。
+          required: false
+          schema:
+            type: integer
+            format: int64
+            example: 1611029776000
+        - name: dateTo
+          in: query
+          description: 取得終了日時。指定日時未満の建玉を検索します。
+          required: false
+          schema:
+            type: integer
+            format: int64
+            example: 1611129776000
+      responses:
+        200:
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      format: int64
+                      description: 建玉ID
+                      example: 13714
+                    symbolId:
+                      type: integer
+                      format: int64
+                      description: シンボルID
+                      example: 12
+                    positionStatus:
+                      type: string
+                      description: 建玉ステータス（OPEN, PARTIALLY_CLOSED）
+                      example: OPEN
+                    orderSide:
+                      type: string
+                      description: 売買方向（SELL, BUY）
+                      example: SELL
+                    price:
+                      type: string
+                      description: 建値
+                      example: "0.054"
+                    amount:
+                      type: string
+                      description: 建玉数量
+                      example: "0.012"
+                    remainingAmount:
+                      type: string
+                      description: 未決済建玉数量
+                      example: "0.012"
+                    leverage:
+                      type: string
+                      description: レバレッジ
+                      example: "1.4"
+                    usedMargin:
+                      type: string
+                      description: 必要証拠金
+                      example: "2688"
+                    floatingProfit:
+                      type: string
+                      description: 建玉評価損益
+                      example: "-135"
+                    createdAt:
+                      type: integer
+                      format: int64
+                      description: 建玉作成日時
+                      example: 1657445402372
+                    updatedAt:
+                      type: integer
+                      format: int64
+                      description: 建玉更新日時
+                      example: 1657545114403
+
+
+
+components:
+  schemas:
+    Order:
+      type: object
+      properties:
+        price:
+          type: string
+          example: "3633849"
+        amount:
+          type: string
+          example: "0.01"
+        assetAmount:
+          type: string
+          example: "0.072"
+    Trade:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 25
+          description: 約定履歴ID
+        orderSide:
+          type: string
+        price:
+          type: string
+          example: "5000000"
+        amount:
+          type: string
+          example: "0.5"
+        assetAmount:
+          type: string
+          example: "2500000"
+          description: 総額。価格 * 数量 * 円換算価格(買いの場合は買い板ベストBid, 売りの場合は売り板ベストAsk)。円換算価格取得不可時はnull
+        tradedAt:
+          type: integer
+          format: int64
+          example: 1644161460996
+    OrderData:
+      type: object
+      required:
+        - orderBehavior
+        - orderSide
+        - orderType
+        - amount
+      properties:
+        orderBehavior:
+          type: string
+          description: 注文の種類（新規または決済）
+          example: OPEN
+        positionId:
+          type: integer
+          format: int64
+          description: 決済対象の建玉ID。決済注文の場合必須。
+          example: 956
+        orderSide:
+          type: string
+          description: 売買方向（BUYまたはSELL）
+          example: BUY
+        orderType:
+          type: string
+          description: 注文タイプ（LIMIT, MARKET, STOP）
+          example: LIMIT
+        price:
+          type: string
+          description: 注文価格。指値注文や逆指値注文の場合必須。
+          example: "3500000"
+        amount:
+          type: string
+          description: 注文数量
+          example: "0.1"
+        orderExpire:
+          type: string
+          description: 注文有効期限（GTC, DAY）
+          example: GTC
+        leverage:
+          type: number
+          format: float
+          description: レバレッジ倍率。新規注文の場合のみ。
+          example: 2.0
+        closeBehavior:
+          type: string
+          description: 建玉決済の挙動（CROSS, FIFO）
+          example: CROSS
+        postOnly:
+          type: boolean
+          description: メイカー注文のみ許可するかどうか
+          example: false
+        ifdCloseLimitPrice:
+          type: string
+          description: IFD決済指値注文価格
+          example: "3800000"
+        ifdCloseStopPrice:
+          type: string
+          description: IFD決済逆指値注文価格
+          example: "3200000"
+    OrderDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        symbolId:
+          type: integer
+          format: int64
+        orderBehavior:
+          type: string
+        orderSide:
+          type: string
+        orderPattern:
+          type: string
+        orderType:
+          type: string
+        closeBehavior:
+          type: string
+        price:
+          type: string
+        averagePrice:
+          type: string
+        amount:
+          type: string
+        remainingAmount:
+          type: string
+        orderStatus:
+          type: string
+        postOnly:
+          type: boolean
+        oco1OrderId:
+          type: integer
+          format: int64
+        oco2OrderId:
+          type: integer
+          format: int64
+        ifdOpenOrderId:
+          type: integer
+          format: int64
+        ifdCloseLimitPrice:
+          type: string
+        ifdCloseStopPrice:
+          type: string
+        positionId:
+          type: integer
+          format: int64
+        orderExpire:
+          type: string
+        expireBusinessDate:
+          type: integer
+        leverage:
+          type: string
+        necessaryMargin:
+          type: string
+        businessDate:
+          type: integer
+        orderCreatedAt:
+          type: integer
+          format: int64
+        createdAt:
+          type: integer
+          format: int64
+        updatedAt:
+          type: integer
+          format: int64
+    OrderResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: 注文ID
+          example: 944
+        symbolId:
+          type: integer
+          format: int64
+          description: シンボルID
+          example: 7
+        orderBehavior:
+          type: string
+          description: 注文の種類（新規または決済）
+          example: OPEN
+        orderSide:
+          type: string
+          description: 売買方向（BUYまたはSELL）
+          example: BUY
+        orderPattern:
+          type: string
+          description: 注文パターン（NORMAL, OCO, IFD, IFD_OCO）
+          example: NORMAL
+        orderType:
+          type: string
+          description: 注文タイプ（LIMIT, MARKET, STOP）
+          example: LIMIT
+        price:
+          type: string
+          description: 注文価格
+          example: "5500000"
+        averagePrice:
+          type: string
+          description: 平均約定価格
+          example: "0"
+        amount:
+          type: string
+          description: 注文数量
+          example: "0.20"
+        remainingAmount:
+          type: string
+          description: 未約定数量
+          example: "0.20"
+        orderStatus:
+          type: string
+          description: 注文ステータス（WORKING_ORDER, PARTIAL_FILL等）
+          example: WORKING_ORDER
+        postOnly:
+          type: boolean
+          description: メイカー注文のみ許可されたかどうか
+          example: false
+        oco1OrderId:
+          type: integer
+          format: int64
+          description: OCO1注文ID
+        oco2OrderId:
+          type: integer
+          format: int64
+          description: OCO2注文ID
+        ifdOpenOrderId:
+          type: integer
+          format: int64
+          description: IFD新規注文ID
+        ifdCloseLimitPrice:
+          type: string
+          description: IFD決済指値注文価格
+        ifdCloseStopPrice:
+          type: string
+          description: IFD決済逆指値注文価格
+        positionId:
+          type: integer
+          format: int64
+          description: 決済対象建玉ID
+        orderExpire:
+          type: string
+          description: 有効期限タイプ
+          example: GTC
+        leverage:
+          type: string
+          description: レバレッジ倍率
+          example: "1.2"
+        necessaryMargin:
+          type: string
+          description: 注文中証拠金
+          example: "246459"
+        createdAt:
+          type: integer
+          format: int64
+          description: 注文作成日時
+          example: 1646551682584
+        updatedAt:
+          type: integer
+          format: int64
+          description: 注文更新日時
+          example: 1646551837901
+    CfdTrade:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: トレードID
+          example: 1959
+        symbolId:
+          type: integer
+          description: シンボルID
+          example: 12
+        orderBehavior:
+          type: string
+          description: 新規注文または決済注文
+          example: OPEN
+        tradeBehavior:
+          type: string
+          description: 新規約定または決済約定
+          example: OPEN
+        orderSide:
+          type: string
+          description: 売買方向
+          example: BUY
+        orderPattern:
+          type: string
+          description: 注文方法
+          example: NORMAL
+        orderType:
+          type: string
+          description: 執行条件
+          example: LIMIT
+        tradeAction:
+          type: string
+          description: 約定アクション
+          example: TAKER
+        price:
+          type: string
+          description: 約定価格
+          example: "0.049"
+        amount:
+          type: string
+          description: 約定数量
+          example: "0.048"
+        profit:
+          type: string
+          description: 売買損益
+          example: "0"
+        fee:
+          type: string
+          description: 約定手数料
+          example: "38"
+        positionFee:
+          type: string
+          description: 実現建玉管理料(円)
+          example: "71"
+        closeTradeProfit:
+          type: string
+          description: 決済損益(円)
+          example: "60"
+        assetAmount:
+          type: string
+          description: 約定代金(円)
+          example: "0.003"
+        openPrice:
+          type: string
+          description: 建値
+          example: "0.049"
+        jpyConversion:
+          type: string
+          description: 円換算価格（約定時点）
+          example: "5499999"
+        orderId:
+          type: integer
+          description: 注文ID
+          example: 1399
+        positionId:
+          type: integer
+          description: 建玉ID
+          example: 2041
+        businessDate:
+          type: integer
+          description: 取引日
+          example: 20220629
+        createdAt:
+          type: integer
+          format: int64
+          description: 作成日時
+          example: 1655081092602
+        updatedAt:
+          type: integer
+          format: int64
+          description: 更新日時
+          example: 1655081092602
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: API-KEY
+    SignatureAuth:
+      type: apiKey
+      in: header
+      name: SIGNATURE
+security:
+  - ApiKeyAuth: []
+  - SignatureAuth: []
